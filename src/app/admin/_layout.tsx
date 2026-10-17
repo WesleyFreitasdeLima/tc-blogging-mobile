@@ -20,7 +20,7 @@ import {
   getInitials,
 } from '../../data/user';
 
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 const menuItems = [
@@ -33,6 +33,7 @@ const menuItems = [
 export default function AdminLayout() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isMobile = width < 600;
 
   function isActive(route: string) {
@@ -48,11 +49,16 @@ export default function AdminLayout() {
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.main} edges={['top']}>
+      <SafeAreaView style={styles.main} edges={['top', 'left', 'right']}>
         <Slot />
       </SafeAreaView>
 
-      <View style={styles.bottomBar}>
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: Math.max(insets.bottom, 12) },
+        ]}
+      >
         {menuItems.map((item) => {
           const active = isActive(item.route);
           const Icon = item.icon;
