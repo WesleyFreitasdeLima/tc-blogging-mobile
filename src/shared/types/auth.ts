@@ -19,8 +19,3 @@ export interface LoginResponseData {
   accessToken: string;
   user: User;
 }
-
-export interface ApiResponse<T> {
-  message: string;
-  data: T;
-}

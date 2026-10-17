@@ -1,4 +1,3 @@
-
 import {
   createContext,
   useCallback,
@@ -8,28 +7,9 @@ import {
   type ReactNode,
 } from 'react';
 
-import { api } from '../services/api';
-import { tokenStorage } from '../services/token-storage';
-
-export type Role = 'ADMIN' | 'TEACHER';
-
-export type User = {
-  id: number | string;
-  name?: string;
-  login?: string;
-  role: Role;
-  [key: string]: unknown;
-};
-
-type LoginResponse = {
-  message: string;
-  data: string;
-};
-
-type MeResponse = {
-  message?: string;
-  data: User;
-};
+import { authService } from '@/shared/services/auth.service';
+import { tokenStorage } from '@/shared/services/token-storage';
+import type { User } from '@/shared/types/auth';
 
 type AuthContextData = {
   user: User | null;
@@ -39,27 +19,17 @@ type AuthContextData = {
   logout: () => Promise<void>;
 };
 
-export const AuthContext = createContext<
-  AuthContextData | undefined
->(undefined);
+export const AuthContext = createContext<AuthContextData | undefined>(undefined);
 
-export function AuthProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function AuthProvider({ children, }: { children: ReactNode; }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchMe = useCallback(async (): Promise<User> => {
-    const response = await api.get<MeResponse>('/me');
-    const currentUser = response.data.data;
+    const currentUser = await authService.getMe();
 
-    if (
-      !currentUser?.role ||
-      !['ADMIN', 'TEACHER'].includes(currentUser.role)
-    ) {
+    if (!currentUser?.role || !['ADMIN', 'TEACHER'].includes(currentUser.role)) {
       throw new Error('Dados do usuário ou role inválidos.');
     }
 
@@ -90,36 +60,20 @@ export function AuthProvider({
 
   const login = useCallback(
     async (loginValue: string, password: string) => {
-      const response = await api.post<LoginResponse>(
-        '/auth/login',
-        {
-          login: loginValue,
-          password,
-        },
-      );
+      const { accessToken, user: loggedUser } = await authService.login({
+        login: loginValue,
+        password,
+      });
 
-      const accessToken = response.data.data;
-
-      if (
-        typeof accessToken !== 'string' ||
-        !accessToken
-      ) {
-        throw new Error('A API não retornou um JWT válido.');
+      if (!accessToken || typeof accessToken !== 'string') {
+        throw new Error('A API não retornou um token válido.');
       }
 
       await tokenStorage.set(accessToken);
       setToken(accessToken);
-
-      try {
-        await fetchMe();
-      } catch (error) {
-        await tokenStorage.remove();
-        setToken(null);
-        setUser(null);
-        throw error;
-      }
+      setUser(loggedUser);
     },
-    [fetchMe],
+    [],
   );
 
   const logout = useCallback(async () => {
@@ -144,6 +98,9 @@ export function AuthProvider({
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
-  return context as AuthContextData;
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth deve ser utilizado dentro de um AuthProvider');
+  }
+  return context;
 }
