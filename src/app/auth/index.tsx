@@ -14,6 +14,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useAuth } from '@/shared/contexts/auth';
 import { useState } from 'react';
+import { isAxiosError } from 'axios';
 
 export const FormAuthSchema = z.object({
   login: z.string().min(1, 'Informe o login'),
@@ -45,11 +46,15 @@ export default function LoginScreen() {
       await login(data.login, data.password);
       router.replace('/admin');
     } catch (error) {
-      setApiError(
-        error instanceof Error
-          ? error.message
-          : 'Não foi possível realizar o login.',
-      );
+      if (isAxiosError(error)) {
+        setApiError(
+          error.response?.data?.message || 'Não foi possível realizar o login.',
+        );
+      } else if (error instanceof Error) {
+        setApiError(error.message);
+      } else {
+        setApiError('Não foi possível realizar o login.');
+      }
     }
   }
 
