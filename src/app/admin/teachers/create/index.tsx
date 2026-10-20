@@ -1,8 +1,17 @@
 
+import { isAxiosError } from 'axios';
 import { router } from 'expo-router';
-import { ArrowLeft, Check, UserRound } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  AtSign,
+  Check,
+  KeyRound,
+  Mail,
+  UserRound,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -12,21 +21,67 @@ import {
   View,
 } from 'react-native';
 
+import { teachersService } from '@/shared/services/teachers.service';
+
 export default function CreateTeachers() {
   const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  function handleSave() {
-    const trimmedName = name.trim();
+  async function handleSave() {
+    const teacherData = {
+      name: name.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      password,
+    };
 
-    if (!trimmedName) {
+    if (!teacherData.name) {
       Alert.alert('Campo obrigatório', 'Informe o nome do professor.');
       return;
     }
 
-    // TODO: Salvar o professor no banco de dados.
-    // Por enquanto, apenas valida o nome e retorna à listagem.
+    if (!teacherData.username) {
+      Alert.alert('Campo obrigatório', 'Informe o nome de usuário.');
+      return;
+    }
 
-    router.replace('/admin/teachers');
+    if (!teacherData.email) {
+      Alert.alert('Campo obrigatório', 'Informe o e-mail do professor.');
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teacherData.email)) {
+      Alert.alert('E-mail inválido', 'Informe um endereço de e-mail válido.');
+      return;
+    }
+
+    if (!teacherData.password) {
+      Alert.alert('Campo obrigatório', 'Informe uma senha inicial.');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await teachersService.create(teacherData);
+      router.replace('/admin/teachers');
+    } catch (error) {
+      if (isAxiosError(error)) {
+        Alert.alert(
+          'Erro ao cadastrar',
+          error.response?.data?.message ||
+            'Não foi possível cadastrar o professor.',
+        );
+      } else if (error instanceof Error) {
+        Alert.alert('Erro ao cadastrar', error.message);
+      } else {
+        Alert.alert('Erro', 'Ocorreu um erro inesperado ao cadastrar.');
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -55,35 +110,114 @@ export default function CreateTeachers() {
       </View>
 
       <View style={styles.form}>
-        <View style={styles.fieldHeader}>
-          <View style={styles.fieldIcon}>
-            <UserRound size={18} color="#4F46E5" />
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <UserRound size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>Nome completo</Text>
+              <Text style={styles.fieldHint}>Nome de exibição do docente</Text>
+            </View>
           </View>
-          <View style={styles.fieldCopy}>
-            <Text style={styles.label}>Nome completo</Text>
-            <Text style={styles.fieldHint}>Como será exibido na equipe</Text>
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex.: Camila Ferreira"
+            placeholderTextColor="#94A3B8"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Ex.: Camila Ferreira"
-          placeholderTextColor="#94A3B8"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-          autoCorrect={false}
-          returnKeyType="done"
-          onSubmitEditing={handleSave}
-        />
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <AtSign size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>Nome de usuário</Text>
+              <Text style={styles.fieldHint}>Usado para entrar no app</Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex.: camila.ferreira"
+            placeholderTextColor="#94A3B8"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="username"
+            returnKeyType="next"
+          />
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <Mail size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>E-mail</Text>
+              <Text style={styles.fieldHint}>Endereço de contato do docente</Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="camila@exemplo.com"
+            placeholderTextColor="#94A3B8"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            returnKeyType="next"
+          />
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <KeyRound size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>Senha inicial</Text>
+              <Text style={styles.fieldHint}>Defina a senha de acesso</Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Defina uma senha inicial"
+            placeholderTextColor="#94A3B8"
+            value={password}
+            onChangeText={setPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            textContentType="newPassword"
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+          />
+        </View>
 
         <Pressable
           accessibilityRole="button"
           onPress={handleSave}
-          style={styles.saveButton}
+          disabled={saving}
+          style={[styles.saveButton, saving && styles.buttonDisabled]}
         >
-          <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
-          <Text style={styles.saveButtonText}>Salvar professor</Text>
+          {saving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.saveButtonText}>Cadastrar professor</Text>
+            </>
+          )}
         </Pressable>
       </View>
     </ScrollView>
@@ -154,11 +288,14 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 18,
-    gap: 17,
+    gap: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 15,
+  },
+  fieldBlock: {
+    gap: 10,
   },
   fieldHint: {
     color: '#94A3B8',
@@ -187,6 +324,9 @@ const styles = StyleSheet.create({
     gap: 9,
     borderRadius: 11,
     backgroundColor: '#4F46E5',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: '#FFFFFF',

@@ -11,3 +11,10 @@ export interface ListTeachersParams {
   page?: number;
   limit?: number;
 }
+
+export interface CreateTeacherRequest {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+}

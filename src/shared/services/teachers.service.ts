@@ -1,5 +1,8 @@
 import type { ApiResponse } from '@/shared/types/api';
-import type { Teacher } from '@/shared/types/teacher';
+import type {
+    CreateTeacherRequest,
+    Teacher,
+} from '@/shared/types/teacher';
 import { api } from './api';
 
 interface ApiUser extends Omit<Teacher, 'role'> {
@@ -31,5 +34,14 @@ export const teachersService = {
     }
 
     return teachers;
+  },
+
+  async create(data: CreateTeacherRequest): Promise<Teacher> {
+    const response = await api.post<ApiResponse<ApiUser>>('/users', {
+      ...data,
+      role: 'teacher',
+    });
+
+    return { ...response.data.data, role: 'teacher' };
   },
 };
