@@ -71,7 +71,22 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
 
       await tokenStorage.set(accessToken);
       setToken(accessToken);
-      setUser(loggedUser);
+
+      try {
+        const currentUser = loggedUser ?? (await authService.getMe());
+        const normalizedRole = currentUser.role.toUpperCase();
+
+        if (normalizedRole !== 'ADMIN' && normalizedRole !== 'TEACHER') {
+          throw new Error('Dados do usuário ou perfil inválido.');
+        }
+
+        setUser({ ...currentUser, role: normalizedRole });
+      } catch (error) {
+        await tokenStorage.remove();
+        setToken(null);
+        setUser(null);
+        throw error;
+      }
     },
     [],
   );
