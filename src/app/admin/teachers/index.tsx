@@ -1,15 +1,71 @@
 
-import { router } from 'expo-router';
-import { Pencil, Plus, Trash2, UserRound } from 'lucide-react-native';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Trash2,
+  UserRound,
+} from 'lucide-react-native';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-const teachers = [
-  { id: '1', name: 'Mateus Silva' },
-  { id: '2', name: 'José Santos' },
-  { id: '3', name: 'Pedro Oliveira' },
-];
+import { teachersService } from '@/shared/services/teachers.service';
+import type { Teacher } from '@/shared/types/teacher';
+
+const PAGE_SIZE = 3;
 
 export default function TeachersScreen() {
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [loadError, setLoadError] = useState('');
+
+  const loadTeachers = useCallback(async () => {
+    setLoadError('');
+
+    try {
+      const data = await teachersService.getAll();
+      setTeachers(data);
+      setPage((currentPage) =>
+        Math.min(currentPage, Math.max(1, Math.ceil(data.length / PAGE_SIZE))),
+      );
+    } catch (error) {
+      console.error('Erro ao carregar professores:', error);
+      setLoadError('Não foi possível carregar os professores.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTeachers();
+    }, [loadTeachers]),
+  );
+
+  function handleRefresh() {
+    setRefreshing(true);
+    loadTeachers();
+  }
+
+  const pageCount = Math.max(1, Math.ceil(teachers.length / PAGE_SIZE));
+  const visibleTeachers = teachers.slice(
+    (page - 1) * PAGE_SIZE,
+    page * PAGE_SIZE,
+  );
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -33,56 +89,117 @@ export default function TeachersScreen() {
 
       <View style={styles.listHeading}>
         <Text style={styles.listLabel}>EQUIPE DOCENTE</Text>
-        <Text style={styles.count}>{teachers.length} cadastrados</Text>
+        <Text style={styles.count}>
+          {loading
+            ? 'Carregando...'
+            : teachers.length === 1
+              ? '1 professor encontrado'
+              : `${teachers.length} professores encontrados`}
+        </Text>
       </View>
 
-      <FlatList
-        data={teachers}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <Text style={styles.empty}>Nenhum professor cadastrado.</Text>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.teacherCard}>
-            <View style={styles.teacherInfo}>
-              <View style={styles.avatar}>
-                <UserRound size={21} color="#4F46E5" strokeWidth={1.8} />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4F46E5" />
+        </View>
+      ) : (
+        <FlatList
+          data={visibleTeachers}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor="#4F46E5"
+              colors={['#4F46E5']}
+            />
+          }
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              {loadError || 'Nenhum professor cadastrado.'}
+            </Text>
+          }
+          ListFooterComponent={
+            teachers.length > PAGE_SIZE ? (
+              <View style={styles.pagination}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Página anterior"
+                  disabled={page === 1}
+                  onPress={() => setPage((currentPage) => currentPage - 1)}
+                  style={[
+                    styles.pageButton,
+                    page === 1 && styles.pageButtonDisabled,
+                  ]}
+                >
+                  <ChevronLeft
+                    size={18}
+                    color={page === 1 ? '#CBD5E1' : '#4F46E5'}
+                  />
+                </Pressable>
+                <Text style={styles.pageLabel}>
+                  Página {page} de {pageCount}
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Próxima página"
+                  disabled={page === pageCount}
+                  onPress={() => setPage((currentPage) => currentPage + 1)}
+                  style={[
+                    styles.pageButton,
+                    page === pageCount && styles.pageButtonDisabled,
+                  ]}
+                >
+                  <ChevronRight
+                    size={18}
+                    color={page === pageCount ? '#CBD5E1' : '#4F46E5'}
+                  />
+                </Pressable>
               </View>
-              <View style={styles.nameBlock}>
-                <Text style={styles.teacherName}>{item.name}</Text>
-                <Text style={styles.teacherRole}>Professor</Text>
+            ) : null
+          }
+          renderItem={({ item }) => (
+            <View style={styles.teacherCard}>
+              <View style={styles.teacherInfo}>
+                <View style={styles.avatar}>
+                  <UserRound size={21} color="#4F46E5" strokeWidth={1.8} />
+                </View>
+                <View style={styles.nameBlock}>
+                  <Text style={styles.teacherName}>{item.name}</Text>
+                  <Text style={styles.teacherRole}>{item.email}</Text>
+                </View>
               </View>
-            </View>
 
-            <View style={styles.actions}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Editar ${item.name}`}
-                onPress={() =>
-                  router.push(`/admin/teachers/${item.id}/edit`)
-                }
-                style={styles.editButton}
-              >
-                <Pencil size={15} color="#4F46E5" strokeWidth={2} />
-                <Text style={styles.editButtonText}>Editar</Text>
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Excluir ${item.name}`}
-                onPress={() =>
-                  router.push(`/admin/teachers/${item.id}/delete`)
-                }
-                style={styles.deleteButton}
-              >
-                <Trash2 size={15} color="#DC2626" strokeWidth={2} />
-                <Text style={styles.deleteButtonText}>Excluir</Text>
-              </Pressable>
+              <View style={styles.actions}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Editar ${item.name}`}
+                  onPress={() =>
+                    router.push(`/admin/teachers/${item.id}/edit`)
+                  }
+                  style={styles.editButton}
+                >
+                  <Pencil size={15} color="#4F46E5" strokeWidth={2} />
+                  <Text style={styles.editButtonText}>Editar</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Excluir ${item.name}`}
+                  onPress={() =>
+                    router.push(`/admin/teachers/${item.id}/delete`)
+                  }
+                  style={styles.deleteButton}
+                >
+                  <Trash2 size={15} color="#DC2626" strokeWidth={2} />
+                  <Text style={styles.deleteButtonText}>Excluir</Text>
+                </Pressable>
+              </View>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -151,6 +268,11 @@ const styles = StyleSheet.create({
   list: {
     paddingBottom: 20,
     gap: 10,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   teacherCard: {
     padding: 15,
@@ -226,5 +348,28 @@ const styles = StyleSheet.create({
     padding: 24,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
+  },
+  pagination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 18,
+    paddingVertical: 18,
+  },
+  pageButton: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#EEF2FF',
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#F1F5F9',
+  },
+  pageLabel: {
+    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });
