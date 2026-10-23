@@ -2,6 +2,7 @@ import type { ApiResponse } from '@/shared/types/api';
 import type {
     CreateTeacherRequest,
     Teacher,
+    UpdateTeacherRequest,
 } from '@/shared/types/teacher';
 import { api } from './api';
 
@@ -42,6 +43,25 @@ export const teachersService = {
       role: 'teacher',
     });
 
+    return { ...response.data.data, role: 'teacher' };
+  },
+
+  async getById(id: number | string): Promise<Teacher> {
+    const response = await api.get<ApiResponse<ApiUser>>(`/users/${id}`);
+    const user = response.data.data;
+
+    if (user.role.toLowerCase() !== 'teacher') {
+      throw new Error('O usuário solicitado não é um professor.');
+    }
+
+    return { ...user, role: 'teacher' };
+  },
+
+  async update(
+    id: number | string,
+    data: UpdateTeacherRequest,
+  ): Promise<Teacher> {
+    const response = await api.put<ApiResponse<ApiUser>>(`/users/${id}`, data);
     return { ...response.data.data, role: 'teacher' };
   },
 };

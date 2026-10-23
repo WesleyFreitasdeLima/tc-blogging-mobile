@@ -1,8 +1,17 @@
 
+import { isAxiosError } from 'axios';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Check, UserRound } from 'lucide-react-native';
-import { useState } from 'react';
 import {
+  ArrowLeft,
+  AtSign,
+  Check,
+  KeyRound,
+  Mail,
+  UserRound,
+} from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -12,40 +21,113 @@ import {
   View,
 } from 'react-native';
 
-const teachers = [
-  { id: '1', name: 'Mateus Silva' },
-  { id: '2', name: 'José Santos' },
-  { id: '3', name: 'Pedro Oliveira' },
-];
+import { teachersService } from '@/shared/services/teachers.service';
 
 export default function EditTeacher() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
-  const teacher = teachers.find((teacher) => teacher.id === id);
+  useEffect(() => {
+    let active = true;
 
-  const [name, setName] = useState(teacher?.name ?? '');
+    async function loadTeacher() {
+      if (!id) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
 
-  function handleSave() {
-    const trimmedName = name.trim();
+      try {
+        const teacher = await teachersService.getById(id);
+        if (!active) return;
 
-    if (!trimmedName) {
+        setName(teacher.name);
+        setUsername(teacher.username);
+        setEmail(teacher.email);
+      } catch (error) {
+        if (!active) return;
+        console.error('Erro ao carregar professor:', error);
+        setNotFound(true);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadTeacher();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  async function handleSave() {
+    const teacherData = {
+      name: name.trim(),
+      username: username.trim(),
+      email: email.trim(),
+      ...(password ? { password } : {}),
+    };
+
+    if (!teacherData.name) {
       Alert.alert('Campo obrigatório', 'Informe o nome do professor.');
       return;
     }
 
-    if (!teacher) {
-      Alert.alert('Erro', 'Professor não encontrado.');
+    if (!teacherData.username) {
+      Alert.alert('Campo obrigatório', 'Informe o nome de usuário.');
       return;
     }
 
-    // TODO: Atualizar o professor no banco de dados.
+    if (!teacherData.email) {
+      Alert.alert('Campo obrigatório', 'Informe o e-mail do professor.');
+      return;
+    }
 
-    router.replace('/admin/teachers');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(teacherData.email)) {
+      Alert.alert('E-mail inválido', 'Informe um endereço de e-mail válido.');
+      return;
+    }
+
+    if (!id) return;
+
+    try {
+      setSaving(true);
+      await teachersService.update(id, teacherData);
+      router.replace('/admin/teachers');
+    } catch (error) {
+      if (isAxiosError(error)) {
+        Alert.alert(
+          'Erro ao salvar',
+          error.response?.data?.message ||
+            'Não foi possível atualizar o professor.',
+        );
+      } else if (error instanceof Error) {
+        Alert.alert('Erro ao salvar', error.message);
+      } else {
+        Alert.alert('Erro', 'Ocorreu um erro inesperado ao salvar.');
+      }
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (!teacher) {
+  if (loading) {
     return (
-      <View style={styles.container}>
+      <View style={[styles.screen, styles.center]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <View style={[styles.screen, styles.center, styles.notFoundContainer]}>
         <View style={styles.notFoundIcon}>
           <UserRound size={25} color="#64748B" />
         </View>
@@ -85,40 +167,119 @@ export default function EditTeacher() {
         <Text style={styles.eyebrow}>ATUALIZAR CADASTRO</Text>
         <Text style={styles.title}>Editar professor</Text>
         <Text style={styles.description}>
-          Altere as informações de {teacher.name}.
+          Atualize os dados de acesso e contato do docente.
         </Text>
       </View>
 
       <View style={styles.form}>
-        <View style={styles.fieldHeader}>
-          <View style={styles.fieldIcon}>
-            <UserRound size={18} color="#4F46E5" />
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <UserRound size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>Nome completo</Text>
+              <Text style={styles.fieldHint}>Nome de exibição do docente</Text>
+            </View>
           </View>
-          <View style={styles.fieldCopy}>
-            <Text style={styles.label}>Nome completo</Text>
-            <Text style={styles.fieldHint}>Revise o nome do docente</Text>
-          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Nome do professor"
+            placeholderTextColor="#94A3B8"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoCorrect={false}
+            returnKeyType="next"
+          />
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Nome do professor"
-          placeholderTextColor="#94A3B8"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-          autoCorrect={false}
-          returnKeyType="done"
-          onSubmitEditing={handleSave}
-        />
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <AtSign size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>Nome de usuário</Text>
+              <Text style={styles.fieldHint}>Usado para entrar no app</Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Nome de usuário"
+            placeholderTextColor="#94A3B8"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="username"
+            returnKeyType="next"
+          />
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <Mail size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>E-mail</Text>
+              <Text style={styles.fieldHint}>Endereço de contato do docente</Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="professor@exemplo.com"
+            placeholderTextColor="#94A3B8"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
+            textContentType="emailAddress"
+            returnKeyType="next"
+          />
+        </View>
+
+        <View style={styles.fieldBlock}>
+          <View style={styles.fieldHeader}>
+            <View style={styles.fieldIcon}>
+              <KeyRound size={18} color="#4F46E5" />
+            </View>
+            <View style={styles.fieldCopy}>
+              <Text style={styles.label}>Nova senha</Text>
+              <Text style={styles.fieldHint}>Deixe em branco para manter a atual</Text>
+            </View>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Opcional"
+            placeholderTextColor="#94A3B8"
+            value={password}
+            onChangeText={setPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            textContentType="newPassword"
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
+          />
+        </View>
 
         <Pressable
           accessibilityRole="button"
           onPress={handleSave}
-          style={styles.saveButton}
+          disabled={saving}
+          style={[styles.saveButton, saving && styles.buttonDisabled]}
         >
-          <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
-          <Text style={styles.saveButtonText}>Salvar alterações</Text>
+          {saving ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Check size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.saveButtonText}>Salvar alterações</Text>
+            </>
+          )}
         </Pressable>
       </View>
     </ScrollView>
@@ -129,6 +290,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notFoundContainer: {
+    padding: 24,
+    gap: 16,
   },
   container: {
     flexGrow: 1,
@@ -173,11 +342,14 @@ const styles = StyleSheet.create({
   },
   form: {
     padding: 18,
-    gap: 17,
+    gap: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 15,
+  },
+  fieldBlock: {
+    gap: 10,
   },
   fieldHeader: {
     flexDirection: 'row',
@@ -222,6 +394,9 @@ const styles = StyleSheet.create({
     gap: 9,
     borderRadius: 11,
     backgroundColor: '#4F46E5',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   saveButtonText: {
     color: '#FFFFFF',

@@ -18,3 +18,10 @@ export interface CreateTeacherRequest {
   email: string;
   password: string;
 }
+
+export interface UpdateTeacherRequest {
+  name: string;
+  username: string;
+  email: string;
+  password?: string;
+}
