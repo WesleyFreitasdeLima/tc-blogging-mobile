@@ -16,6 +16,7 @@ type AuthContextData = {
   token: string | null;
   loading: boolean;
   login: (login: string, password: string) => Promise<void>;
+  updateUser: (user: User) => void;
   logout: () => Promise<void>;
 };
 
@@ -97,6 +98,10 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -104,6 +109,7 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
         token,
         loading,
         login,
+        updateUser,
         logout,
       }}
     >

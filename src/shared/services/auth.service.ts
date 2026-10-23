@@ -39,6 +39,20 @@ export const authService = {
     const response = await api.get<ApiResponse<ApiUser>>('/users/me');
     return normalizeUser(response.data.data);
   },
+
+  async updateMe(data: {
+    name: string;
+    username: string;
+    email: string;
+    password?: string;
+  }): Promise<User> {
+    const response = await api.put<ApiResponse<ApiUser>>('/users/me', data);
+    return normalizeUser(response.data.data);
+  },
+
+  async deleteMe(): Promise<void> {
+    await api.delete('/users/me');
+  },
 };
 
 export const loginService = authService;
