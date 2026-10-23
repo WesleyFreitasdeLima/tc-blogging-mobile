@@ -1,15 +1,153 @@
+import { isAxiosError } from 'axios';
+import { router, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, Check, Trash2, UserRound } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from 'react-native';
 
-import { router } from 'expo-router';
-import { ArrowLeft, Check, UserRound } from 'lucide-react-native';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { teachersService } from '@/shared/services/teachers.service';
+import type { Teacher } from '@/shared/types/teacher';
 
 export default function DeleteTeacher() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [teacher, setTeacher] = useState<Teacher | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadTeacher() {
+      if (!id) {
+        setLoadError('O identificador do professor não foi informado.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const data = await teachersService.getById(id);
+        if (active) setTeacher(data);
+      } catch (error) {
+        if (!active) return;
+        console.error('Erro ao carregar professor para exclusão:', error);
+        setLoadError(
+          isAxiosError(error)
+            ? error.response?.data?.message || 'Não foi possível carregar o professor.'
+            : 'Não foi possível carregar o professor.',
+        );
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    loadTeacher();
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  async function handleDelete() {
+    if (!id) return;
+
+    try {
+      setDeleting(true);
+      await teachersService.delete(id);
+      setDeleted(true);
+    } catch (error) {
+      if (isAxiosError(error)) {
+        Alert.alert(
+          'Erro ao excluir',
+          error.response?.data?.message || 'Não foi possível excluir o professor.',
+        );
+      } else if (error instanceof Error) {
+        Alert.alert('Erro ao excluir', error.message);
+      } else {
+        Alert.alert('Erro', 'Ocorreu um erro inesperado ao excluir.');
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (loadError || !teacher) {
+    return (
+      <View style={[styles.container, styles.center, styles.messageContainer]}>
+        <View style={styles.iconBadge}>
+          <UserRound size={25} color="#64748B" />
+        </View>
+        <Text style={styles.title}>Professor indisponível</Text>
+        <Text style={styles.description}>
+          {loadError || 'Esse cadastro não está disponível para exclusão.'}
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.replace('/admin/teachers')}
+          style={styles.returnButton}
+        >
+          <Text style={styles.returnButtonText}>Voltar para professores</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (deleted) {
+    return (
+      <View style={styles.container}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Voltar para professores"
+          onPress={() => router.replace('/admin/teachers')}
+          style={styles.backButton}
+        >
+          <ArrowLeft size={18} color="#4F46E5" />
+          <Text style={styles.backText}>Professores</Text>
+        </Pressable>
+
+        <View style={styles.result}>
+          <View style={styles.successIcon}>
+            <Check size={27} color="#4F46E5" strokeWidth={2.5} />
+          </View>
+          <Text style={styles.eyebrow}>AÇÃO CONCLUÍDA</Text>
+          <Text style={styles.title}>Professor removido</Text>
+          <Text style={styles.description}>
+            {teacher.name} foi removido da equipe docente.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.replace('/admin/teachers')}
+            style={styles.returnButton}
+          >
+            <Text style={styles.returnButtonText}>Voltar para a listagem</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Voltar para professores"
-        onPress={() => router.replace('/admin/teachers')}
+        onPress={() => router.back()}
+        disabled={deleting}
         style={styles.backButton}
       >
         <ArrowLeft size={18} color="#4F46E5" />
@@ -17,30 +155,41 @@ export default function DeleteTeacher() {
       </Pressable>
 
       <View style={styles.result}>
-        <View style={styles.successIcon}>
-          <Check size={27} color="#4F46E5" strokeWidth={2.5} />
+        <View style={styles.trashIcon}>
+          <Trash2 size={27} color="#DC2626" strokeWidth={2.2} />
         </View>
-
-        <Text style={styles.eyebrow}>AÇÃO CONCLUÍDA</Text>
-        <Text style={styles.title}>Professor removido</Text>
+        <Text style={styles.dangerEyebrow}>CONFIRMAR EXCLUSÃO</Text>
+        <Text style={styles.title}>Excluir professor?</Text>
         <Text style={styles.description}>
-          O cadastro do professor foi removido com sucesso.
+          {`Esta ação não pode ser desfeita. O cadastro de ${teacher.name} será removido permanentemente.`}
         </Text>
-
         <View style={styles.notice}>
           <UserRound size={17} color="#4F46E5" />
-          <Text style={styles.noticeText}>
-            A equipe docente foi atualizada.
-          </Text>
+          <Text style={styles.noticeText}>{teacher.email}</Text>
         </View>
 
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => router.replace('/admin/teachers')}
-          style={styles.returnButton}
-        >
-          <Text style={styles.returnButtonText}>Voltar para a listagem</Text>
-        </Pressable>
+        <View style={styles.actionBlock}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleDelete}
+            disabled={deleting}
+            style={[styles.deleteButton, deleting && styles.buttonDisabled]}
+          >
+            {deleting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.deleteButtonText}>Sim, excluir professor</Text>
+            )}
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.back()}
+            disabled={deleting}
+            style={styles.cancelButton}
+          >
+            <Text style={styles.cancelButtonText}>Cancelar</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -52,6 +201,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 18,
     backgroundColor: '#F8FAFC',
+  },
+  center: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  messageContainer: {
+    padding: 24,
+    gap: 16,
   },
   backButton: {
     flexDirection: 'row',
@@ -76,6 +233,23 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
     gap: 13,
   },
+  iconBadge: {
+    width: 68,
+    height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: '#EEF2FF',
+  },
+  trashIcon: {
+    width: 68,
+    height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+    borderRadius: 22,
+    backgroundColor: '#FEE2E2',
+  },
   successIcon: {
     width: 68,
     height: 68,
@@ -91,6 +265,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.3,
   },
+  dangerEyebrow: {
+    color: '#DC2626',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.3,
+  },
   title: {
     color: '#172033',
     fontSize: 26,
@@ -98,7 +278,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   description: {
-    maxWidth: 300,
+    maxWidth: 320,
     color: '#64748B',
     fontSize: 14,
     lineHeight: 22,
@@ -113,12 +293,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 9,
     marginTop: 9,
+    paddingHorizontal: 12,
     borderRadius: 12,
     backgroundColor: '#EEF2FF',
   },
   noticeText: {
     color: '#4F46E5',
     fontSize: 13,
+    fontWeight: '600',
+  },
+  actionBlock: {
+    width: '100%',
+    maxWidth: 360,
+    gap: 10,
+    marginTop: 14,
+  },
+  deleteButton: {
+    width: '100%',
+    minHeight: 49,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: '#DC2626',
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  deleteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  cancelButton: {
+    width: '100%',
+    minHeight: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 11,
+    backgroundColor: '#F1F5F9',
+  },
+  cancelButtonText: {
+    color: '#475569',
+    fontSize: 14,
     fontWeight: '600',
   },
   returnButton: {

@@ -64,4 +64,8 @@ export const teachersService = {
     const response = await api.put<ApiResponse<ApiUser>>(`/users/${id}`, data);
     return { ...response.data.data, role: 'teacher' };
   },
+
+  async delete(id: number | string): Promise<void> {
+    await api.delete(`/users/${id}`);
+  },
 };
