@@ -1,17 +1,19 @@
 
 import { Slot, router, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import {
-  View,
-  Text,
+  ActivityIndicator,
   Pressable,
   StyleSheet,
+  Text,
+  View,
   useWindowDimensions,
 } from 'react-native';
 
 import {
-  LayoutDashboard,
   FileText,
   GraduationCap,
+  LayoutDashboard,
   Users,
 } from 'lucide-react-native';
 
@@ -20,6 +22,7 @@ import {
   getInitials,
 } from '../../data/user';
 
+import { useAuth } from '@/shared/contexts/auth';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
@@ -32,9 +35,21 @@ const menuItems = [
 
 export default function AdminLayout() {
   const pathname = usePathname();
+  const { user, loading } = useAuth();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isMobile = width < 600;
+  const isAdmin = user?.role === 'ADMIN';
+  const isTeachersRoute = pathname.startsWith('/admin/teachers');
+  const visibleMenuItems = menuItems.filter(
+    (item) => item.route !== '/admin/teachers' || isAdmin,
+  );
+
+  useEffect(() => {
+    if (!loading && isTeachersRoute && !isAdmin) {
+      router.replace('/admin');
+    }
+  }, [isAdmin, isTeachersRoute, loading]);
 
   function isActive(route: string) {
     if (route === '/admin') {
@@ -50,7 +65,13 @@ export default function AdminLayout() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.main} edges={['top', 'left', 'right']}>
-        <Slot />
+        {isTeachersRoute && (loading || !isAdmin) ? (
+          <View style={styles.accessLoading}>
+            <ActivityIndicator size="large" color="#4F46E5" />
+          </View>
+        ) : (
+          <Slot />
+        )}
       </SafeAreaView>
 
       <View
@@ -59,7 +80,7 @@ export default function AdminLayout() {
           { paddingBottom: Math.max(insets.bottom, 12) },
         ]}
       >
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const active = isActive(item.route);
           const Icon = item.icon;
 
@@ -214,5 +235,10 @@ const styles = StyleSheet.create({
   pageContent: {
     flex: 1,
     minHeight: 0,
+  },
+  accessLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

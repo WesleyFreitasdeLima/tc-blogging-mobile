@@ -17,5 +17,5 @@ export interface LoginRequest {
 
 export interface LoginResponseData {
   accessToken: string;
-  user: User;
+  user?: User;
 }

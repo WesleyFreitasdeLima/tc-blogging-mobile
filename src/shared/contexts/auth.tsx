@@ -16,6 +16,7 @@ type AuthContextData = {
   token: string | null;
   loading: boolean;
   login: (login: string, password: string) => Promise<void>;
+  updateUser: (user: User) => void;
   logout: () => Promise<void>;
 };
 
@@ -71,7 +72,22 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
 
       await tokenStorage.set(accessToken);
       setToken(accessToken);
-      setUser(loggedUser);
+
+      try {
+        const currentUser = loggedUser ?? (await authService.getMe());
+        const normalizedRole = currentUser.role.toUpperCase();
+
+        if (normalizedRole !== 'ADMIN' && normalizedRole !== 'TEACHER') {
+          throw new Error('Dados do usuário ou perfil inválido.');
+        }
+
+        setUser({ ...currentUser, role: normalizedRole });
+      } catch (error) {
+        await tokenStorage.remove();
+        setToken(null);
+        setUser(null);
+        throw error;
+      }
     },
     [],
   );
@@ -82,6 +98,10 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -89,6 +109,7 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
         token,
         loading,
         login,
+        updateUser,
         logout,
       }}
     >
