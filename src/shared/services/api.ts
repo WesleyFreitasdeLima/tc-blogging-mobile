@@ -1,14 +1,15 @@
+import axios from "axios";
+import { tokenStorage } from "./token-storage";
 
-import axios from 'axios';
-import { tokenStorage } from './token-storage';
-
-const rawUrl = (process.env.EXPO_PUBLIC_API_URL ?? '').trim().replace(/\/+$/, '');
-const baseURL = rawUrl.endsWith('/api') ? rawUrl : `${rawUrl}/api`;
+const rawUrl = (process.env.EXPO_PUBLIC_API_URL ?? "")
+  .trim()
+  .replace(/\/+$/, "");
+const baseURL = rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`;
 
 export const api = axios.create({
   baseURL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
@@ -17,6 +18,14 @@ api.interceptors.request.use(async (config) => {
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+api.interceptors.response.use(async (config) => {
+  if (config.status == 401) {
+    tokenStorage.remove();
   }
 
   return config;

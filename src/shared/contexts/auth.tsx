@@ -5,11 +5,11 @@ import {
   useEffect,
   useState,
   type ReactNode,
-} from 'react';
+} from "react";
 
-import { authService } from '@/shared/services/auth.service';
-import { tokenStorage } from '@/shared/services/token-storage';
-import type { User } from '@/shared/types/auth';
+import { authService } from "@/shared/services/auth.service";
+import { tokenStorage } from "@/shared/services/token-storage";
+import { UserRoleEnum, type User } from "@/shared/types/auth";
 
 type AuthContextData = {
   user: User | null;
@@ -20,9 +20,11 @@ type AuthContextData = {
   logout: () => Promise<void>;
 };
 
-export const AuthContext = createContext<AuthContextData | undefined>(undefined);
+export const AuthContext = createContext<AuthContextData | undefined>(
+  undefined,
+);
 
-export function AuthProvider({ children, }: { children: ReactNode; }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,8 +32,15 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
   const fetchMe = useCallback(async (): Promise<User> => {
     const currentUser = await authService.getMe();
 
-    if (!currentUser?.role || !['ADMIN', 'TEACHER'].includes(currentUser.role)) {
-      throw new Error('Dados do usuário ou role inválidos.');
+    if (
+      !currentUser?.role ||
+      ![
+        UserRoleEnum.ADMIN,
+        UserRoleEnum.TEACHER,
+        UserRoleEnum.STUDENT,
+      ].includes(currentUser.role)
+    ) {
+      throw new Error("Dados do usuário ou role inválidos.");
     }
 
     setUser(currentUser);
@@ -59,38 +68,38 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
     restoreSession();
   }, [fetchMe]);
 
-  const login = useCallback(
-    async (loginValue: string, password: string) => {
-      const { accessToken, user: loggedUser } = await authService.login({
-        login: loginValue,
-        password,
-      });
+  const login = useCallback(async (loginValue: string, password: string) => {
+    const { accessToken, user: loggedUser } = await authService.login({
+      login: loginValue,
+      password,
+    });
 
-      if (!accessToken || typeof accessToken !== 'string') {
-        throw new Error('A API não retornou um token válido.');
+    if (!accessToken || typeof accessToken !== "string") {
+      throw new Error("A API não retornou um token válido.");
+    }
+
+    await tokenStorage.set(accessToken);
+    setToken(accessToken);
+
+    try {
+      const currentUser = loggedUser ?? (await authService.getMe());
+
+      if (
+        currentUser.role !== UserRoleEnum.ADMIN &&
+        currentUser.role !== UserRoleEnum.TEACHER &&
+        currentUser.role !== UserRoleEnum.STUDENT
+      ) {
+        throw new Error("Dados do usuário ou perfil inválido.");
       }
 
-      await tokenStorage.set(accessToken);
-      setToken(accessToken);
-
-      try {
-        const currentUser = loggedUser ?? (await authService.getMe());
-        const normalizedRole = currentUser.role.toUpperCase();
-
-        if (normalizedRole !== 'ADMIN' && normalizedRole !== 'TEACHER') {
-          throw new Error('Dados do usuário ou perfil inválido.');
-        }
-
-        setUser({ ...currentUser, role: normalizedRole });
-      } catch (error) {
-        await tokenStorage.remove();
-        setToken(null);
-        setUser(null);
-        throw error;
-      }
-    },
-    [],
-  );
+      setUser(currentUser);
+    } catch (error) {
+      await tokenStorage.remove();
+      setToken(null);
+      setUser(null);
+      throw error;
+    }
+  }, []);
 
   const logout = useCallback(async () => {
     await tokenStorage.remove();
@@ -121,7 +130,7 @@ export function AuthProvider({ children, }: { children: ReactNode; }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth deve ser utilizado dentro de um AuthProvider');
+    throw new Error("useAuth deve ser utilizado dentro de um AuthProvider");
   }
   return context;
 }

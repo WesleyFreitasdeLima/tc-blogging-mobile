@@ -1,5 +1,4 @@
-
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from "expo-router";
 import {
   ChevronLeft,
   ChevronRight,
@@ -7,8 +6,8 @@ import {
   Plus,
   Trash2,
   UserRound,
-} from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+} from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,22 +16,39 @@ import {
   StyleSheet,
   Text,
   View,
-} from 'react-native';
+} from "react-native";
 
-import { teachersService } from '@/shared/services/teachers.service';
-import type { Teacher } from '@/shared/types/teacher';
+import { useAuth } from "@/shared/contexts/auth";
+import { teachersService } from "@/shared/services/teachers.service";
+import { UserRoleEnum } from "@/shared/types/auth";
+import type { Teacher } from "@/shared/types/teacher";
 
 const PAGE_SIZE = 3;
 
 export default function TeachersScreen() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingPage, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
-  const [loadError, setLoadError] = useState('');
+  const [loadError, setLoadError] = useState("");
+
+  const { user, loading } = useAuth();
+
+  const hasPermission =
+    !!user && [UserRoleEnum.ADMIN, UserRoleEnum.TEACHER].includes(user.role);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user || !hasPermission) {
+      router.replace("/admin");
+    }
+  }, [user, loading, hasPermission]);
+
+  if (!hasPermission) return;
 
   const loadTeachers = useCallback(async () => {
-    setLoadError('');
+    setLoadError("");
 
     try {
       const data = await teachersService.getAll();
@@ -41,8 +57,8 @@ export default function TeachersScreen() {
         Math.min(currentPage, Math.max(1, Math.ceil(data.length / PAGE_SIZE))),
       );
     } catch (error) {
-      console.error('Erro ao carregar professores:', error);
-      setLoadError('Não foi possível carregar os professores.');
+      console.error("Erro ao carregar professores:", error);
+      setLoadError("Não foi possível carregar os professores.");
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -65,7 +81,6 @@ export default function TeachersScreen() {
     (page - 1) * PAGE_SIZE,
     page * PAGE_SIZE,
   );
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -79,7 +94,7 @@ export default function TeachersScreen() {
 
         <Pressable
           accessibilityRole="button"
-          onPress={() => router.push('/admin/teachers/create')}
+          onPress={() => router.push("/admin/teachers/create")}
           style={styles.createButton}
         >
           <Plus size={19} color="#FFFFFF" strokeWidth={2.5} />
@@ -90,15 +105,15 @@ export default function TeachersScreen() {
       <View style={styles.listHeading}>
         <Text style={styles.listLabel}>EQUIPE DOCENTE</Text>
         <Text style={styles.count}>
-          {loading
-            ? 'Carregando...'
+          {loadingPage
+            ? "Carregando..."
             : teachers.length === 1
-              ? '1 professor encontrado'
+              ? "1 professor encontrado"
               : `${teachers.length} professores encontrados`}
         </Text>
       </View>
 
-      {loading && !refreshing ? (
+      {loadingPage && !refreshing ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#4F46E5" />
         </View>
@@ -113,12 +128,12 @@ export default function TeachersScreen() {
               refreshing={refreshing}
               onRefresh={handleRefresh}
               tintColor="#4F46E5"
-              colors={['#4F46E5']}
+              colors={["#4F46E5"]}
             />
           }
           ListEmptyComponent={
             <Text style={styles.empty}>
-              {loadError || 'Nenhum professor cadastrado.'}
+              {loadError || "Nenhum professor cadastrado."}
             </Text>
           }
           ListFooterComponent={
@@ -136,7 +151,7 @@ export default function TeachersScreen() {
                 >
                   <ChevronLeft
                     size={18}
-                    color={page === 1 ? '#CBD5E1' : '#4F46E5'}
+                    color={page === 1 ? "#CBD5E1" : "#4F46E5"}
                   />
                 </Pressable>
                 <Text style={styles.pageLabel}>
@@ -154,7 +169,7 @@ export default function TeachersScreen() {
                 >
                   <ChevronRight
                     size={18}
-                    color={page === pageCount ? '#CBD5E1' : '#4F46E5'}
+                    color={page === pageCount ? "#CBD5E1" : "#4F46E5"}
                   />
                 </Pressable>
               </View>
@@ -176,9 +191,7 @@ export default function TeachersScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Editar ${item.name}`}
-                  onPress={() =>
-                    router.push(`/admin/teachers/${item.id}/edit`)
-                  }
+                  onPress={() => router.push(`/admin/teachers/${item.id}/edit`)}
                   style={styles.editButton}
                 >
                   <Pencil size={15} color="#4F46E5" strokeWidth={2} />
@@ -209,7 +222,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 22,
     paddingTop: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   header: {
     gap: 20,
@@ -218,51 +231,51 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   eyebrow: {
-    color: '#4F46E5',
+    color: "#4F46E5",
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1.4,
   },
   title: {
     fontSize: 30,
-    fontWeight: '800',
-    color: '#172033',
+    fontWeight: "800",
+    color: "#172033",
   },
   description: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 14,
     lineHeight: 21,
   },
   createButton: {
     minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 9,
     paddingHorizontal: 18,
     borderRadius: 12,
-    backgroundColor: '#4F46E5',
+    backgroundColor: "#4F46E5",
   },
   createButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   listHeading: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginTop: 28,
     marginBottom: 10,
   },
   listLabel: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1.1,
   },
   count: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 12,
   },
   list: {
@@ -271,105 +284,105 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   teacherCard: {
     padding: 15,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     gap: 15,
   },
   teacherInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   avatar: {
     width: 42,
     height: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 13,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: "#EEF2FF",
   },
   nameBlock: {
     flex: 1,
     gap: 3,
   },
   teacherName: {
-    color: '#172033',
+    color: "#172033",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   teacherRole: {
-    color: '#94A3B8',
+    color: "#94A3B8",
     fontSize: 12,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 9,
   },
   editButton: {
     flex: 1,
     minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 7,
     borderRadius: 10,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: "#EEF2FF",
   },
   editButtonText: {
-    color: '#4F46E5',
+    color: "#4F46E5",
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   deleteButton: {
     flex: 1,
     minHeight: 40,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 7,
     borderRadius: 10,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: "#FEF2F2",
   },
   deleteButtonText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   empty: {
-    color: '#64748B',
-    textAlign: 'center',
+    color: "#64748B",
+    textAlign: "center",
     padding: 24,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
   },
   pagination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 18,
     paddingVertical: 18,
   },
   pageButton: {
     width: 38,
     height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 10,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: "#EEF2FF",
   },
   pageButtonDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: "#F1F5F9",
   },
   pageLabel: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

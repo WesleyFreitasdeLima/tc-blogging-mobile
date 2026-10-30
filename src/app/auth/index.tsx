@@ -1,31 +1,28 @@
-import { router } from 'expo-router';
+import { Href, router, useLocalSearchParams } from "expo-router";
 
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { Controller, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth } from '@/shared/contexts/auth';
-import { useState } from 'react';
-import { isAxiosError } from 'axios';
+import { useAuth } from "@/shared/contexts/auth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { isAxiosError } from "axios";
+import { useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 
 export const FormAuthSchema = z.object({
-  login: z.string().min(1, 'Informe o login'),
-  password: z.string().min(1, 'Informe a senha'),
+  login: z.string().min(1, "Informe o login"),
+  password: z.string().min(1, "Informe a senha"),
 });
 
 export type FormAuthData = z.infer<typeof FormAuthSchema>;
 
 export default function LoginScreen() {
-  const { login } = useAuth();
-  const [apiError, setApiError] = useState('');
+  const { user, loading, login } = useAuth();
+  const [apiError, setApiError] = useState("");
+  const { returnTo } = useLocalSearchParams<{
+    returnTo?: string;
+  }>();
 
   const {
     control,
@@ -34,26 +31,26 @@ export default function LoginScreen() {
   } = useForm<FormAuthData>({
     resolver: zodResolver(FormAuthSchema),
     defaultValues: {
-      login: '',
-      password: '',
+      login: "",
+      password: "",
     },
   });
 
   async function onSubmit(data: FormAuthData) {
-    setApiError('');
+    setApiError("");
 
     try {
       await login(data.login, data.password);
-      router.replace('/admin');
+      router.replace((returnTo || "/admin") as Href);
     } catch (error) {
       if (isAxiosError(error)) {
         setApiError(
-          error.response?.data?.message || 'Não foi possível realizar o login.',
+          error.response?.data?.message || "Não foi possível realizar o login.",
         );
       } else if (error instanceof Error) {
         setApiError(error.message);
       } else {
-        setApiError('Não foi possível realizar o login.');
+        setApiError("Não foi possível realizar o login.");
       }
     }
   }
@@ -62,10 +59,8 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Entrar</Text>
 
-      {apiError ? (
-        <Text style={{ color: 'red' }}>{apiError}</Text>
-      ) : null}
-      
+      {apiError ? <Text style={{ color: "red" }}>{apiError}</Text> : null}
+
       <View style={styles.field}>
         <Text style={styles.label}>Login</Text>
 
@@ -74,10 +69,7 @@ export default function LoginScreen() {
           name="login"
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
-              style={[
-                styles.input,
-                errors.login && styles.inputError,
-              ]}
+              style={[styles.input, errors.login && styles.inputError]}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -89,9 +81,7 @@ export default function LoginScreen() {
         />
 
         {errors.login && (
-          <Text style={styles.errorText}>
-            {errors.login.message}
-          </Text>
+          <Text style={styles.errorText}>{errors.login.message}</Text>
         )}
       </View>
 
@@ -103,10 +93,7 @@ export default function LoginScreen() {
           name="password"
           render={({ field: { onChange, onBlur, value } }) => (
             <TextInput
-              style={[
-                styles.input,
-                errors.password && styles.inputError,
-              ]}
+              style={[styles.input, errors.password && styles.inputError]}
               value={value}
               onChangeText={onChange}
               onBlur={onBlur}
@@ -117,9 +104,7 @@ export default function LoginScreen() {
         />
 
         {errors.password && (
-          <Text style={styles.errorText}>
-            {errors.password.message}
-          </Text>
+          <Text style={styles.errorText}>{errors.password.message}</Text>
         )}
       </View>
 
@@ -129,8 +114,16 @@ export default function LoginScreen() {
         disabled={isSubmitting}
       >
         <Text style={styles.buttonText}>
-          {isSubmitting ? 'Entrando...' : 'Entrar'}
+          {isSubmitting ? "Entrando..." : "Entrar"}
         </Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.button}
+        onPress={() => router.navigate("/")}
+        disabled={isSubmitting}
+      >
+        <Text style={styles.buttonText}>Início</Text>
       </Pressable>
     </View>
   );
@@ -139,14 +132,14 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     padding: 24,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: '#172033',
+    fontWeight: "700",
+    color: "#172033",
     marginBottom: 28,
   },
   field: {
@@ -154,38 +147,38 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#334155',
+    fontWeight: "600",
+    color: "#334155",
     marginBottom: 8,
   },
   input: {
     height: 48,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: "#CBD5E1",
     borderRadius: 10,
     paddingHorizontal: 14,
-    backgroundColor: '#FFFFFF',
-    color: '#172033',
+    backgroundColor: "#FFFFFF",
+    color: "#172033",
   },
   inputError: {
-    borderColor: '#DC2626',
+    borderColor: "#DC2626",
   },
   errorText: {
-    color: '#DC2626',
+    color: "#DC2626",
     fontSize: 12,
     marginTop: 6,
   },
   button: {
     height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4F46E5',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4F46E5",
     borderRadius: 10,
     marginTop: 8,
   },
   buttonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

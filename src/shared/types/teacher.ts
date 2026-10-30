@@ -1,9 +1,11 @@
+import { UserRoleEnum } from "./auth";
+
 export interface Teacher {
   id: number | string;
   name: string;
   username: string;
   email: string;
-  role: 'teacher';
+  role: UserRoleEnum;
   isActive: boolean;
 }
 

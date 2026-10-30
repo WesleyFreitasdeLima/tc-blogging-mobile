@@ -1,6 +1,5 @@
-
-import { Slot, router, usePathname } from 'expo-router';
-import { useEffect } from 'react';
+import { Slot, router, usePathname } from "expo-router";
+import { useEffect } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -8,29 +7,29 @@ import {
   Text,
   View,
   useWindowDimensions,
-} from 'react-native';
+} from "react-native";
 
 import {
   FileText,
   GraduationCap,
   LayoutDashboard,
   Users,
-} from 'lucide-react-native';
+} from "lucide-react-native";
 
+import { getInitials } from "../../data/user";
+
+import { useAuth } from "@/shared/contexts/auth";
+import { UserRoleEnum } from "@/shared/types/auth";
 import {
-  currentUser,
-  getInitials,
-} from '../../data/user';
-
-import { useAuth } from '@/shared/contexts/auth';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 const menuItems = [
-  { label: 'Início', route: '/admin', icon: LayoutDashboard },
-  { label: 'Posts', route: '/admin/posts', icon: FileText },
-  { label: 'Professores', route: '/admin/teachers', icon: Users },
-  { label: 'Alunos', route: '/admin/students', icon: GraduationCap },
+  { label: "Início", route: "/admin", icon: LayoutDashboard },
+  { label: "Posts", route: "/admin/posts", icon: FileText },
+  { label: "Professores", route: "/admin/teachers", icon: Users },
+  { label: "Alunos", route: "/admin/students", icon: GraduationCap },
 ];
 
 export default function AdminLayout() {
@@ -39,32 +38,42 @@ export default function AdminLayout() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isMobile = width < 600;
-  const isAdmin = user?.role === 'ADMIN';
-  const isTeachersRoute = pathname.startsWith('/admin/teachers');
+  const isAdmin = user?.role === UserRoleEnum.ADMIN;
+  const isTeachersRoute = pathname.startsWith("/admin/teachers");
+  const isStudentRoute = pathname.startsWith("/admin/students");
   const visibleMenuItems = menuItems.filter(
-    (item) => item.route !== '/admin/teachers' || isAdmin,
+    (item) =>
+      isAdmin ||
+      item.route === "/admin" ||
+      ((item.route === "/admin/posts" ||
+        item.route === "/admin/teachers" ||
+        item.route === "/admin/students") &&
+        user?.role === UserRoleEnum.TEACHER),
   );
 
   useEffect(() => {
-    if (!loading && isTeachersRoute && !isAdmin) {
-      router.replace('/admin');
+    if (!loading && !user) {
+      router.replace("/auth");
     }
-  }, [isAdmin, isTeachersRoute, loading]);
+  }, [user, loading]);
+
+  useEffect(() => {
+    if (!loading && isTeachersRoute && isStudentRoute && !isAdmin) {
+      router.replace("/admin");
+    }
+  }, [isAdmin, isTeachersRoute, isStudentRoute, loading]);
 
   function isActive(route: string) {
-    if (route === '/admin') {
-      return pathname === '/admin';
+    if (route === "/admin") {
+      return pathname === "/admin";
     }
 
-    return (
-      pathname === route ||
-      pathname.startsWith(`${route}/`)
-    );
+    return pathname === route || pathname.startsWith(`${route}/`);
   }
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.main} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.main} edges={["top", "left", "right"]}>
         {isTeachersRoute && (loading || !isAdmin) ? (
           <View style={styles.accessLoading}>
             <ActivityIndicator size="large" color="#4F46E5" />
@@ -93,7 +102,7 @@ export default function AdminLayout() {
               <Icon
                 size={22}
                 strokeWidth={active ? 2.4 : 1.8}
-                color={active ? '#4F46E5' : '#64748B'}
+                color={active ? "#4F46E5" : "#64748B"}
               />
 
               <Text
@@ -111,18 +120,17 @@ export default function AdminLayout() {
         })}
 
         <Pressable
-          onPress={() => router.navigate('/admin/profile')}
+          onPress={() => router.navigate("/admin/profile")}
           style={styles.navItem}
         >
           <View
             style={[
               styles.avatar,
-              pathname.startsWith('/admin/perfil') &&
-                styles.avatarActive,
+              pathname.startsWith("/admin/perfil") && styles.avatarActive,
             ]}
           >
             <Text style={styles.avatarText}>
-              {getInitials(currentUser.name)}
+              {getInitials(user?.name ?? "")}
             </Text>
           </View>
 
@@ -130,8 +138,7 @@ export default function AdminLayout() {
             numberOfLines={1}
             style={[
               styles.navLabel,
-              pathname.startsWith('/admin/perfil') &&
-                styles.activeText,
+              pathname.startsWith("/admin/perfil") && styles.activeText,
               isMobile && styles.mobileLabel,
             ]}
           >
@@ -146,7 +153,7 @@ export default function AdminLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
 
   main: {
@@ -155,12 +162,12 @@ const styles = StyleSheet.create({
   },
 
   bottomBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    backgroundColor: '#FFFFFF',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    backgroundColor: "#FFFFFF",
     borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
+    borderTopColor: "#E2E8F0",
     paddingTop: 10,
     paddingBottom: 10,
     paddingHorizontal: 6,
@@ -168,8 +175,8 @@ const styles = StyleSheet.create({
 
   navItem: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     gap: 5,
     paddingVertical: 4,
     paddingHorizontal: 2,
@@ -177,14 +184,14 @@ const styles = StyleSheet.create({
   },
 
   navIcon: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 21,
   },
 
   navLabel: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 11,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 
   mobileLabel: {
@@ -192,44 +199,44 @@ const styles = StyleSheet.create({
   },
 
   activeText: {
-    color: '#4F46E5',
-    fontWeight: '700',
+    color: "#4F46E5",
+    fontWeight: "700",
   },
 
   avatar: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#E2E8F0",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   avatarActive: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: "#4F46E5",
   },
 
   avatarText: {
-    color: '#475569',
+    color: "#475569",
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: "800",
   },
 
   backToSite: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
   },
 
   backToSiteText: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 
   pageContent: {
@@ -238,7 +245,7 @@ const styles = StyleSheet.create({
   },
   accessLoading: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

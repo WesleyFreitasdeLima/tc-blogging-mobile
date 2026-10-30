@@ -1,6 +1,6 @@
-import { Link, router } from 'expo-router';
-import { BookOpen, LogIn, Search } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { Link, router } from "expo-router";
+import { BookOpen, LogIn, Search } from "lucide-react-native";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,17 +10,18 @@ import {
   Text,
   TextInput,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useAuth } from '@/shared/contexts/auth';
-import { postsService } from '@/shared/services/posts.service';
-import type { Post } from '@/shared/types/post';
+import { useAuth } from "@/shared/contexts/auth";
+import { postsService } from "@/shared/services/posts.service";
+import { UserRoleEnum } from "@/shared/types/auth";
+import type { Post } from "@/shared/types/post";
 
 export default function HomeScreen() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -54,7 +55,7 @@ export default function HomeScreen() {
           setPosts(data ?? []);
         }
       } catch (error) {
-        console.error('Erro ao carregar publicações:', error);
+        console.error("Erro ao carregar publicações:", error);
       } finally {
         if (active) {
           setLoading(false);
@@ -75,17 +76,17 @@ export default function HomeScreen() {
 
   function handleRefresh() {
     setRefreshing(true);
-    setSearch('');
+    setSearch("");
   }
 
   function formatDate(dateString?: string) {
-    if (!dateString) return '';
+    if (!dateString) return "";
     try {
       const date = new Date(dateString);
-      return date.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
+      return date.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
       });
     } catch {
       return dateString;
@@ -93,7 +94,10 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right', 'bottom']}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top", "left", "right", "bottom"]}
+    >
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -102,7 +106,7 @@ export default function HomeScreen() {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             tintColor="#4F46E5"
-            colors={['#4F46E5']}
+            colors={["#4F46E5"]}
           />
         }
       >
@@ -117,10 +121,25 @@ export default function HomeScreen() {
             </Text>
           </View>
 
-          <Link href={user ? '/admin' : '/auth'} asChild>
+          <Link
+            href={
+              user
+                ? user.role == UserRoleEnum.STUDENT
+                  ? "/admin/profile"
+                  : "/admin"
+                : "/auth"
+            }
+            asChild
+          >
             <Pressable style={styles.loginButton}>
               <LogIn size={16} color="#FFFFFF" strokeWidth={2.4} />
-              <Text style={styles.loginText}>{user ? 'Administração' : 'Entrar'}</Text>
+              <Text style={styles.loginText}>
+                {user
+                  ? user.role == UserRoleEnum.STUDENT
+                    ? "Perfil"
+                    : "Administração"
+                  : "Entrar"}
+              </Text>
             </Pressable>
           </Link>
         </View>
@@ -157,7 +176,7 @@ export default function HomeScreen() {
           <Text style={styles.empty}>
             {search.trim()
               ? `Nenhum post encontrado para "${search}".`
-              : 'Nenhuma publicação cadastrada no momento.'}
+              : "Nenhuma publicação cadastrada no momento."}
           </Text>
         ) : (
           posts.map((post) => (
@@ -169,7 +188,7 @@ export default function HomeScreen() {
               <Text style={styles.category}>
                 {post.createdBy?.name
                   ? `POR ${post.createdBy.name.toUpperCase()}`
-                  : 'ARTIGO'}
+                  : "ARTIGO"}
               </Text>
               <Text style={styles.postTitle}>{post.title}</Text>
               {post.content ? (
@@ -178,6 +197,11 @@ export default function HomeScreen() {
                 </Text>
               ) : null}
               <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
+              <Text style={styles.postDescription}>
+                {(post.coments?.length ?? 0 > 0)
+                  ? post.coments?.length + " Comentários"
+                  : ""}
+              </Text>
             </Pressable>
           ))
         )}
@@ -191,77 +215,77 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   content: {
-    width: '100%',
+    width: "100%",
     maxWidth: 1000,
-    alignSelf: 'center',
+    alignSelf: "center",
     padding: 24,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     gap: 12,
     marginBottom: 56,
   },
   brandContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   brand: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#172033',
+    fontWeight: "800",
+    color: "#172033",
   },
   subtitle: {
     fontSize: 13,
-    color: '#64748B',
+    color: "#64748B",
     marginTop: 4,
   },
   loginButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
-    backgroundColor: '#4F46E5',
+    backgroundColor: "#4F46E5",
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
   },
   loginText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   hero: {
     marginBottom: 28,
   },
   eyebrow: {
-    color: '#4F46E5',
-    fontWeight: '800',
+    color: "#4F46E5",
+    fontWeight: "800",
     fontSize: 12,
     letterSpacing: 2,
     marginBottom: 10,
   },
   title: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#172033',
+    fontWeight: "800",
+    color: "#172033",
   },
   description: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 16,
     marginTop: 10,
     lineHeight: 24,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     height: 48,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
     borderRadius: 12,
     paddingHorizontal: 14,
     marginBottom: 24,
@@ -271,49 +295,49 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    height: '100%',
-    color: '#172033',
+    height: "100%",
+    color: "#172033",
     fontSize: 15,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 14,
     padding: 24,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: "#E2E8F0",
   },
   category: {
-    color: '#4F46E5',
-    fontWeight: '700',
+    color: "#4F46E5",
+    fontWeight: "700",
     fontSize: 12,
     marginBottom: 12,
   },
   postTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#172033',
+    fontWeight: "700",
+    color: "#172033",
   },
   postDescription: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 14,
     marginTop: 8,
     lineHeight: 20,
   },
   date: {
-    color: '#94A3B8',
+    color: "#94A3B8",
     marginTop: 12,
     fontSize: 13,
   },
   empty: {
-    textAlign: 'center',
-    color: '#94A3B8',
+    textAlign: "center",
+    color: "#94A3B8",
     fontSize: 15,
     marginVertical: 40,
   },
   footer: {
-    textAlign: 'center',
-    color: '#94A3B8',
+    textAlign: "center",
+    color: "#94A3B8",
     marginTop: 32,
     marginBottom: 16,
   },

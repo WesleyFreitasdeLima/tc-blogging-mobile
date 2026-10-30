@@ -1,35 +1,43 @@
-import { isAxiosError } from 'axios';
-import { router } from 'expo-router';
-import { AtSign, Check, KeyRound, Mail, Trash2, UserRound } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { isAxiosError } from "axios";
+import { router } from "expo-router";
 import {
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
+  AtSign,
+  Check,
+  KeyRound,
+  Mail,
+  Trash2,
+  UserRound,
+} from "lucide-react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
-import { useAuth } from '@/shared/contexts/auth';
-import { authService } from '@/shared/services/auth.service';
+import { useAuth } from "@/shared/contexts/auth";
+import { authService } from "@/shared/services/auth.service";
+import { UserRoleEnum } from "@/shared/types/auth";
 
 export default function ProfileScreen() {
   const { user, loading: authLoading, updateUser, logout } = useAuth();
-  const [name, setName] = useState('');
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    setName(user.name ?? '');
-    setUsername(user.username ?? '');
-    setEmail(user.email ?? '');
+    setName(user.name ?? "");
+    setUsername(user.username ?? "");
+    setEmail(user.email ?? "");
   }, [user]);
 
   async function handleSave() {
@@ -41,12 +49,12 @@ export default function ProfileScreen() {
     };
 
     if (!profileData.name || !profileData.username || !profileData.email) {
-      Alert.alert('Campos obrigatórios', 'Preencha nome, usuário e e-mail.');
+      Alert.alert("Campos obrigatórios", "Preencha nome, usuário e e-mail.");
       return;
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      Alert.alert('E-mail inválido', 'Informe um endereço de e-mail válido.');
+      Alert.alert("E-mail inválido", "Informe um endereço de e-mail válido.");
       return;
     }
 
@@ -54,15 +62,16 @@ export default function ProfileScreen() {
       setSaving(true);
       const updatedUser = await authService.updateMe(profileData);
       updateUser(updatedUser);
-      setPassword('');
-      Alert.alert('Perfil atualizado', 'Seus dados foram salvos com sucesso.');
+      setPassword("");
+      Alert.alert("Perfil atualizado", "Seus dados foram salvos com sucesso.");
     } catch (error) {
       const message = isAxiosError(error)
-        ? error.response?.data?.message || 'Não foi possível atualizar seu perfil.'
+        ? error.response?.data?.message ||
+          "Não foi possível atualizar seu perfil."
         : error instanceof Error
           ? error.message
-          : 'Ocorreu um erro inesperado ao salvar.';
-      Alert.alert('Erro ao salvar', message);
+          : "Ocorreu um erro inesperado ao salvar.";
+      Alert.alert("Erro ao salvar", message);
     } finally {
       setSaving(false);
     }
@@ -70,13 +79,13 @@ export default function ProfileScreen() {
 
   function confirmDelete() {
     Alert.alert(
-      'Excluir conta',
-      'Esta ação é permanente e removerá seu acesso ao sistema. Deseja continuar?',
+      "Excluir conta",
+      "Esta ação é permanente e removerá seu acesso ao sistema. Deseja continuar?",
       [
-        { text: 'Cancelar', style: 'cancel' },
+        { text: "Cancelar", style: "cancel" },
         {
-          text: 'Excluir conta',
-          style: 'destructive',
+          text: "Excluir conta",
+          style: "destructive",
           onPress: () => void handleDelete(),
         },
       ],
@@ -88,16 +97,16 @@ export default function ProfileScreen() {
       setDeleting(true);
       await authService.deleteMe();
       await logout();
-      Alert.alert('Conta excluída', 'Sua conta foi removida.', [
-        { text: 'OK', onPress: () => router.replace('/') },
+      Alert.alert("Conta excluída", "Sua conta foi removida.", [
+        { text: "OK", onPress: () => router.replace("/") },
       ]);
     } catch (error) {
       const message = isAxiosError(error)
-        ? error.response?.data?.message || 'Não foi possível excluir sua conta.'
+        ? error.response?.data?.message || "Não foi possível excluir sua conta."
         : error instanceof Error
           ? error.message
-          : 'Ocorreu um erro inesperado ao excluir a conta.';
-      Alert.alert('Erro ao excluir', message);
+          : "Ocorreu um erro inesperado ao excluir a conta.";
+      Alert.alert("Erro ao excluir", message);
     } finally {
       setDeleting(false);
     }
@@ -133,7 +142,11 @@ export default function ProfileScreen() {
         <View style={styles.identityCopy}>
           <Text style={styles.identityName}>{user.name}</Text>
           <Text style={styles.identityRole}>
-            {user.role === 'ADMIN' ? 'Administrador' : 'Professor'}
+            {user.role === UserRoleEnum.ADMIN
+              ? "Administrador"
+              : user.role === UserRoleEnum.TEACHER
+                ? "Professor"
+                : "Aluno"}
           </Text>
         </View>
       </View>
@@ -215,7 +228,9 @@ export default function ProfileScreen() {
             </View>
             <View style={styles.fieldCopy}>
               <Text style={styles.label}>Nova senha</Text>
-              <Text style={styles.fieldHint}>Deixe em branco para manter a atual</Text>
+              <Text style={styles.fieldHint}>
+                Deixe em branco para manter a atual
+              </Text>
             </View>
           </View>
           <TextInput
@@ -236,7 +251,10 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           onPress={handleSave}
           disabled={saving || deleting}
-          style={[styles.saveButton, (saving || deleting) && styles.buttonDisabled]}
+          style={[
+            styles.saveButton,
+            (saving || deleting) && styles.buttonDisabled,
+          ]}
         >
           {saving ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -253,14 +271,18 @@ export default function ProfileScreen() {
         <View style={styles.dangerHeading}>
           <Text style={styles.dangerTitle}>Excluir conta</Text>
           <Text style={styles.dangerDescription}>
-            A exclusão é permanente. Publicações relacionadas podem impedir a remoção.
+            A exclusão é permanente. Publicações relacionadas podem impedir a
+            remoção.
           </Text>
         </View>
         <Pressable
           accessibilityRole="button"
           onPress={confirmDelete}
           disabled={saving || deleting}
-          style={[styles.deleteButton, (saving || deleting) && styles.buttonDisabled]}
+          style={[
+            styles.deleteButton,
+            (saving || deleting) && styles.buttonDisabled,
+          ]}
         >
           {deleting ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
@@ -279,11 +301,11 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: "#F8FAFC",
   },
   center: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   container: {
     flexGrow: 1,
@@ -296,50 +318,50 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   eyebrow: {
-    color: '#4F46E5',
+    color: "#4F46E5",
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: "800",
     letterSpacing: 1.3,
   },
   title: {
-    color: '#172033',
+    color: "#172033",
     fontSize: 29,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   description: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 14,
     lineHeight: 21,
   },
   identity: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 13,
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
   },
   identityIcon: {
     width: 48,
     height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 14,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: "#EEF2FF",
   },
   identityCopy: {
     flex: 1,
     gap: 4,
   },
   identityName: {
-    color: '#172033',
+    color: "#172033",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   identityRole: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 13,
   },
   form: {
@@ -347,61 +369,61 @@ const styles = StyleSheet.create({
     gap: 20,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    borderColor: "#E2E8F0",
+    backgroundColor: "#FFFFFF",
   },
   fieldBlock: {
     gap: 10,
   },
   fieldHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 11,
   },
   fieldIcon: {
     width: 38,
     height: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: "#EEF2FF",
   },
   fieldCopy: {
     gap: 3,
   },
   label: {
-    color: '#172033',
+    color: "#172033",
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   fieldHint: {
-    color: '#94A3B8',
+    color: "#94A3B8",
     fontSize: 12,
   },
   input: {
     minHeight: 50,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: "#CBD5E1",
     borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-    color: '#172033',
+    backgroundColor: "#FFFFFF",
+    color: "#172033",
     fontSize: 16,
   },
   saveButton: {
     minHeight: 49,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 9,
     marginTop: 4,
     borderRadius: 11,
-    backgroundColor: '#4F46E5',
+    backgroundColor: "#4F46E5",
   },
   saveButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dangerSection: {
     gap: 13,
@@ -412,28 +434,28 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   dangerTitle: {
-    color: '#172033',
+    color: "#172033",
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   dangerDescription: {
-    color: '#64748B',
+    color: "#64748B",
     fontSize: 13,
     lineHeight: 19,
   },
   deleteButton: {
     minHeight: 48,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     borderRadius: 11,
-    backgroundColor: '#DC2626',
+    backgroundColor: "#DC2626",
   },
   deleteButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   buttonDisabled: {
     opacity: 0.7,
