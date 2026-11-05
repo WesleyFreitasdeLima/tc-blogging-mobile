@@ -45,9 +45,7 @@ export default function StudentsScreen() {
     }
   }, [user, loading, hasPermission]);
 
-  if (!hasPermission) return;
-
-  const loadTtudents = useCallback(async () => {
+  const loadStudents = useCallback(async () => {
     setLoadError("");
 
     try {
@@ -68,13 +66,19 @@ export default function StudentsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadTtudents();
-    }, [loadTtudents]),
+      if (hasPermission) {
+        loadStudents();
+      }
+    }, [hasPermission, loadStudents]),
   );
 
   function handleRefresh() {
     setRefreshing(true);
-    loadTtudents();
+    loadStudents();
+  }
+
+  if (!hasPermission) {
+    return null;
   }
 
   const pageCount = Math.max(1, Math.ceil(students.length / PAGE_SIZE));

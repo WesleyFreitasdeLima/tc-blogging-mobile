@@ -39,16 +39,16 @@ export default function AdminLayout() {
   const insets = useSafeAreaInsets();
   const isMobile = width < 600;
   const isAdmin = user?.role === UserRoleEnum.ADMIN;
+  const isTeacher = user?.role === UserRoleEnum.TEACHER;
+  const canAccessManagement = isAdmin || isTeacher;
+
   const isTeachersRoute = pathname.startsWith("/admin/teachers");
   const isStudentRoute = pathname.startsWith("/admin/students");
+  const isPostsRoute = pathname.startsWith("/admin/posts");
+  const isRestrictedRoute = isTeachersRoute || isStudentRoute || isPostsRoute;
+
   const visibleMenuItems = menuItems.filter(
-    (item) =>
-      isAdmin ||
-      item.route === "/admin" ||
-      ((item.route === "/admin/posts" ||
-        item.route === "/admin/teachers" ||
-        item.route === "/admin/students") &&
-        user?.role === UserRoleEnum.TEACHER),
+    (item) => item.route === "/admin" || canAccessManagement,
   );
 
   useEffect(() => {
@@ -58,10 +58,10 @@ export default function AdminLayout() {
   }, [user, loading]);
 
   useEffect(() => {
-    if (!loading && isTeachersRoute && isStudentRoute && !isAdmin) {
+    if (!loading && isRestrictedRoute && !canAccessManagement) {
       router.replace("/admin");
     }
-  }, [isAdmin, isTeachersRoute, isStudentRoute, loading]);
+  }, [canAccessManagement, isRestrictedRoute, loading]);
 
   function isActive(route: string) {
     if (route === "/admin") {
@@ -74,7 +74,7 @@ export default function AdminLayout() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.main} edges={["top", "left", "right"]}>
-        {isTeachersRoute && (loading || !isAdmin) ? (
+        {isRestrictedRoute && (loading || !canAccessManagement) ? (
           <View style={styles.accessLoading}>
             <ActivityIndicator size="large" color="#4F46E5" />
           </View>

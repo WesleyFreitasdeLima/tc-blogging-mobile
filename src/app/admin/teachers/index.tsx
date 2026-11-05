@@ -45,13 +45,16 @@ export default function TeachersScreen() {
     }
   }, [user, loading, hasPermission]);
 
-  if (!hasPermission) return;
-
   const loadTeachers = useCallback(async () => {
     setLoadError("");
 
     try {
-      const data = await teachersService.getAll();
+      let data = await teachersService.getAll();
+
+      if (user && user.role === UserRoleEnum.TEACHER) {
+        data = data.filter((teacher) => teacher.id !== user?.id);
+      }
+
       setTeachers(data);
       setPage((currentPage) =>
         Math.min(currentPage, Math.max(1, Math.ceil(data.length / PAGE_SIZE))),
@@ -67,13 +70,19 @@ export default function TeachersScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadTeachers();
-    }, [loadTeachers]),
+      if (hasPermission) {
+        loadTeachers();
+      }
+    }, [hasPermission, loadTeachers]),
   );
 
   function handleRefresh() {
     setRefreshing(true);
     loadTeachers();
+  }
+
+  if (!hasPermission) {
+    return null;
   }
 
   const pageCount = Math.max(1, Math.ceil(teachers.length / PAGE_SIZE));

@@ -34,8 +34,6 @@ export default function PostsScreen() {
     }
   }, [user, loading, hasPermission]);
 
-  if (!hasPermission) return;
-
   const loadPosts = useCallback(async () => {
     try {
       const data = await postsService.getAll();
@@ -50,13 +48,19 @@ export default function PostsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadPosts();
-    }, [loadPosts]),
+      if (hasPermission) {
+        loadPosts();
+      }
+    }, [hasPermission, loadPosts]),
   );
 
   function handleRefresh() {
     setRefreshing(true);
     loadPosts();
+  }
+
+  if (!hasPermission) {
+    return null;
   }
 
   function formatDate(dateString?: string) {
