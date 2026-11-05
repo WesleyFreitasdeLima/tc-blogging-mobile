@@ -1,12 +1,13 @@
-import type { ApiResponse } from '@/shared/types/api';
+import type { ApiResponse } from "@/shared/types/api";
 import type {
-    CreateTeacherRequest,
-    Teacher,
-    UpdateTeacherRequest,
-} from '@/shared/types/teacher';
-import { api } from './api';
+  CreateTeacherRequest,
+  Teacher,
+  UpdateTeacherRequest,
+} from "@/shared/types/teacher";
+import { UserRoleEnum } from "../types/auth";
+import { api } from "./api";
 
-interface ApiUser extends Omit<Teacher, 'role'> {
+interface ApiUser extends Omit<Teacher, "role"> {
   role: string;
 }
 
@@ -19,15 +20,15 @@ export const teachersService = {
     let hasMorePages = true;
 
     while (hasMorePages) {
-      const response = await api.get<ApiResponse<ApiUser[]>>('/users', {
-        params: { page, limit: API_PAGE_SIZE },
+      const response = await api.get<ApiResponse<ApiUser[]>>("/users", {
+        params: { page, limit: API_PAGE_SIZE, role: UserRoleEnum.TEACHER },
       });
       const users = response.data.data ?? [];
 
       teachers.push(
         ...users
-          .filter((user) => user.role.toLowerCase() === 'teacher')
-          .map((user) => ({ ...user, role: 'teacher' as const })),
+          .filter((user) => user.role === UserRoleEnum.TEACHER)
+          .map((user) => ({ ...user, role: UserRoleEnum.TEACHER as const })),
       );
 
       hasMorePages = users.length === API_PAGE_SIZE;
@@ -38,23 +39,23 @@ export const teachersService = {
   },
 
   async create(data: CreateTeacherRequest): Promise<Teacher> {
-    const response = await api.post<ApiResponse<ApiUser>>('/users', {
+    const response = await api.post<ApiResponse<ApiUser>>("/users", {
       ...data,
-      role: 'teacher',
+      role: UserRoleEnum.TEACHER,
     });
 
-    return { ...response.data.data, role: 'teacher' };
+    return { ...response.data.data, role: UserRoleEnum.TEACHER };
   },
 
   async getById(id: number | string): Promise<Teacher> {
     const response = await api.get<ApiResponse<ApiUser>>(`/users/${id}`);
     const user = response.data.data;
 
-    if (user.role.toLowerCase() !== 'teacher') {
-      throw new Error('O usuário solicitado não é um professor.');
+    if (user.role !== UserRoleEnum.TEACHER) {
+      throw new Error("O usuário solicitado não é um professor.");
     }
 
-    return { ...user, role: 'teacher' };
+    return { ...user, role: UserRoleEnum.TEACHER };
   },
 
   async update(
@@ -62,7 +63,7 @@ export const teachersService = {
     data: UpdateTeacherRequest,
   ): Promise<Teacher> {
     const response = await api.put<ApiResponse<ApiUser>>(`/users/${id}`, data);
-    return { ...response.data.data, role: 'teacher' };
+    return { ...response.data.data, role: UserRoleEnum.TEACHER };
   },
 
   async delete(id: number | string): Promise<void> {

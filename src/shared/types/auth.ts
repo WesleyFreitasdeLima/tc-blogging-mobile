@@ -1,11 +1,15 @@
-export type Role = 'ADMIN' | 'TEACHER';
+export enum UserRoleEnum {
+  STUDENT = "student",
+  TEACHER = "teacher",
+  ADMIN = "admin",
+}
 
 export interface User {
   id: number | string;
   name: string;
   username: string;
   email: string;
-  role: Role;
+  role: UserRoleEnum;
   isActive?: boolean;
   [key: string]: unknown;
 }

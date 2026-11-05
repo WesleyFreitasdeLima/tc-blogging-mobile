@@ -1,21 +1,26 @@
-import type { ApiResponse } from '@/shared/types/api';
-import type {
-  LoginRequest,
-  LoginResponseData,
-  User,
-} from '@/shared/types/auth';
-import { api } from './api';
+import type { ApiResponse } from "@/shared/types/api";
+import {
+  UserRoleEnum,
+  type LoginRequest,
+  type LoginResponseData,
+  type User,
+} from "@/shared/types/auth";
+import { api } from "./api";
 
-type ApiUser = Omit<User, 'role'> & { role: string };
-type ApiLoginResponseData = Omit<LoginResponseData, 'user'> & {
+type ApiUser = Omit<User, "role"> & { role: string };
+type ApiLoginResponseData = Omit<LoginResponseData, "user"> & {
   user?: ApiUser;
 };
 
 function normalizeUser(user: ApiUser): User {
-  const role = user.role.toUpperCase();
+  const role = user.role;
 
-  if (role !== 'ADMIN' && role !== 'TEACHER') {
-    throw new Error('A API retornou um perfil de usuário inválido.');
+  if (
+    role !== UserRoleEnum.ADMIN &&
+    role !== UserRoleEnum.TEACHER &&
+    role !== UserRoleEnum.STUDENT
+  ) {
+    throw new Error("A API retornou um perfil de usuário inválido.");
   }
 
   return { ...user, role } as User;
@@ -24,7 +29,7 @@ function normalizeUser(user: ApiUser): User {
 export const authService = {
   async login(credentials: LoginRequest): Promise<LoginResponseData> {
     const response = await api.post<ApiResponse<ApiLoginResponseData>>(
-      '/auth/login',
+      "/auth/login",
       credentials,
     );
     return {
@@ -36,7 +41,7 @@ export const authService = {
   },
 
   async getMe(): Promise<User> {
-    const response = await api.get<ApiResponse<ApiUser>>('/users/me');
+    const response = await api.get<ApiResponse<ApiUser>>("/users/me");
     return normalizeUser(response.data.data);
   },
 
@@ -46,12 +51,12 @@ export const authService = {
     email: string;
     password?: string;
   }): Promise<User> {
-    const response = await api.put<ApiResponse<ApiUser>>('/users/me', data);
+    const response = await api.put<ApiResponse<ApiUser>>("/users/me", data);
     return normalizeUser(response.data.data);
   },
 
   async deleteMe(): Promise<void> {
-    await api.delete('/users/me');
+    await api.delete("/users/me");
   },
 };
 
