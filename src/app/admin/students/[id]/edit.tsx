@@ -104,7 +104,7 @@ export default function EditStudent() {
         Alert.alert(
           "Erro ao salvar",
           error.response?.data?.message ||
-            "Não foi possível atualizar o aluno.",
+          "Não foi possível atualizar o aluno.",
         );
       } else if (error instanceof Error) {
         Alert.alert("Erro ao salvar", error.message);
@@ -139,7 +139,7 @@ export default function EditStudent() {
           onPress={() => router.replace("/admin/students")}
           style={styles.saveButton}
         >
-          <Text style={styles.saveButtonText}>Voltar para alunoes</Text>
+          <Text style={styles.saveButtonText}>Voltar para alunos</Text>
         </Pressable>
       </View>
     );
@@ -154,12 +154,12 @@ export default function EditStudent() {
     >
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Voltar para alunoes"
+        accessibilityLabel="Voltar para alunos"
         onPress={() => router.back()}
         style={styles.backButton}
       >
         <ArrowLeft size={18} color="#4F46E5" />
-        <Text style={styles.backText}>alunoes</Text>
+        <Text style={styles.backText}>Alunos</Text>
       </Pressable>
 
       <View style={styles.heading}>
