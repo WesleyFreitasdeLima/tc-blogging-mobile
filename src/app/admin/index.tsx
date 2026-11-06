@@ -180,7 +180,7 @@ export default function DashboardScreen() {
                 {post.content}
               </Text>
             ) : null}
-            <Text style={styles.date}>{formatDate(post.createdAt)}z</Text>
+            <Text style={styles.date}>{formatDate(post.createdAt)}</Text>
             <Text style={styles.postDescription}>
               {(post.coments?.length ?? 0 > 0)
                 ? post.coments?.length + " Comentários"
